@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Locker API Controller (Debug)</title>
+  <link rel="stylesheet" href="./controller.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- 1. Server & Auth -->
+    <div class="card">
+      <h2>
+        <span>Server & Login</span>
+        <span id="envBadge" class="badge">Detecting...</span>
+      </h2>
+
+      <label for="baseUrl">Base URL</label>
+      <input id="baseUrl" type="text" placeholder="http://localhost:3000" />
+      <div id="envHint" class="hint"></div>
+
+      <div class="row">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" type="text" value="admin" />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" value="123456" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="loginBtn" type="button">Login & Ambil Token</button>
+        <button id="logoutBtn" type="button" class="danger">Logout</button>
+      </div>
+    </div>
+
+    <!-- 2. Token & Session Countdown (Editable Manual) -->
+    <div class="card">
+      <h2>
+        <span>Session Token</span>
+        <span id="sessionBadge" class="badge">No Token</span>
+      </h2>
+
+      <label for="tokenInput">Login Session Token (bisa diedit manual lalu cek via Ping)</label>
+      <textarea
+        id="tokenInput"
+        class="token-input"
+        rows="2"
+        placeholder="Tempel atau edit token di sini untuk uji valid / 401..."
+      ></textarea>
+
+      <div class="timer-line">
+        <span>Aproksimasi sisa session (10m):</span>
+        <span id="countdownText" class="timer-val">--:--</span>
+      </div>
+
+      <div class="row">
+        <button id="pingBtn" type="button" class="secondary">Ping / Perpanjang</button>
+        <button id="copyBtn" type="button" class="secondary">Copy Token</button>
+      </div>
+    </div>
+
+    <!-- 3. Admin Session Manager (Muncul saat level === 1) -->
+    <div id="adminSessionsCard" class="card hidden">
+      <h2>
+        <span>Admin Sessions (Level 1)</span>
+        <button id="refreshSessionsBtn" type="button" class="secondary mini-btn">Refresh</button>
+      </h2>
+
+      <div class="sub-section">
+        <div class="sub-header">
+          <span class="sub-title">Login Sessions</span>
+          <span id="loginSessCount" class="badge">0</span>
+        </div>
+        <div id="loginSessionsList" class="session-list">
+          <div class="empty-note">Belum dimuat.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="sub-section">
+        <div class="sub-header">
+          <span class="sub-title">Device Sessions (Server)</span>
+          <span id="deviceSessCount" class="badge">0</span>
+        </div>
+        <div id="deviceSessionsList" class="session-list">
+          <div class="empty-note">Belum dimuat.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Node Control + Opt-In & Simulasi Heartbeat -->
+    <div class="card">
+      <h2>
+        <span>Kontrol & Simulasi Node</span>
+        <span id="pollBadge" class="badge">Poll: OFF</span>
+      </h2>
+
+      <label for="lockerName">Locker Name</label>
+      <input id="lockerName" type="text" value="Locker A1" placeholder="Contoh: Locker A1" />
+
+      <div class="row" style="margin-bottom: 10px;">
+        <button id="openNodeBtn" type="button" class="open-btn">Buka (shouldOpen: true)</button>
+        <button id="closeNodeBtn" type="button" class="close-btn">Tutup (shouldOpen: false)</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Opt-In pakai API Key + tombol ➕ -->
+      <div class="sub-header">
+        <span class="sub-title">Opt-In Device (API Key)</span>
+        <span id="optInStatusBadge" class="badge">Ready</span>
+      </div>
+
+      <label for="deviceApiKeyInput">Device API Key (x-api-key)</label>
+      <div class="optin-row">
+        <input
+          id="deviceApiKeyInput"
+          type="text"
+          value="dev-secret-key-123"
+          placeholder="Masukkan API key device..."
+        />
+        <button id="optInAddBtn" type="button" class="add-btn" title="Opt-In & Tambah Device Session">➕</button>
+      </div>
+
+      <!-- List Device Session hasil opt-in (klik untuk equip) -->
+      <div class="sub-header" style="margin-top: 4px;">
+        <span class="sub-title">Daftar Device Session (Klik untuk Equip)</span>
+        <span id="equippedBadge" class="badge">None Equipped</span>
+      </div>
+      <div id="equippedDeviceList" class="session-list" style="margin-bottom: 10px;">
+        <div class="empty-note">Belum ada device session. Tekan ➕ untuk opt-in.</div>
+      </div>
+
+      <label for="equippedSessionInput">Equipped Device Session Token (x-device-session)</label>
+      <input
+        id="equippedSessionInput"
+        type="text"
+        placeholder="Klik salah satu device session di atas atau tempel token..."
+      />
+
+      <div class="row" style="margin-bottom: 8px;">
+        <div>
+          <label for="simIsOpened">Simulasi isOpened</label>
+          <select id="simIsOpened">
+            <option value="false">false (tertutup)</option>
+            <option value="true">true (terbuka)</option>
+          </select>
+        </div>
+        <div>
+          <label for="pollIntervalSec">Interval Poll Status (detik)</label>
+          <input id="pollIntervalSec" type="number" min="1" max="60" value="4" />
+        </div>
+      </div>
+
+      <button id="sendHeartbeatBtn" type="button" style="margin-bottom: 8px;">
+        Kirim Heartbeat (POST /api/device/heartbeat)
+      </button>
+
+      <div class="poll-header" style="margin-top: 6px;">
+        <span class="sub-title">Polling Status Node (GET /api/device/status)</span>
+        <span id="lastPollText" class="muted-small">Belum pernah poll</span>
+      </div>
+
+      <div class="row" style="margin-bottom: 8px;">
+        <button id="togglePollBtn" type="button" class="secondary">Mulai Polling Status</button>
+        <button id="pollOnceBtn" type="button" class="secondary">Poll Sekali Sekarang</button>
+      </div>
+
+      <label for="nodeStatusJson">Status & Heartbeat Node Raw JSON</label>
+      <pre id="nodeStatusJson">{ "info": "Opt-in pakai ➕, klik session untuk equip, lalu kirim Heartbeat" }</pre>
+    </div>
+
+    <!-- 5. Raw JSON Data Endpoints -->
+    <div class="card">
+      <h2>
+        <span>Raw JSON Data</span>
+        <span id="httpStatusBadge" class="badge">Idle</span>
+      </h2>
+
+      <div class="row" style="margin-bottom: 8px;">
+        <button id="getHomeBtn" type="button" class="secondary">GET /api/home</button>
+        <button id="getPackagesBtn" type="button" class="secondary">GET /api/packages</button>
+      </div>
+      <div class="row">
+        <button id="getHistoryBtn" type="button" class="secondary">GET /api/history</button>
+        <button id="getHealthBtn" type="button" class="secondary">GET /health</button>
+      </div>
+
+      <pre id="rawJsonOutput">{ "info": "Klik tombol di atas untuk melihat response JSON" }</pre>
+    </div>
+  </div>
+
+  <script src="./controller.js"></script>
+</body>
+</html>

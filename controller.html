@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Locker API Controller (Debug)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 14px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    h2 {
+      margin: 0 0 10px 0;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.92rem;
+    }
+
+    input, select {
+      background: #0f172a;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: var(--accent);
+      color: #082f49;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:active {
+      opacity: 0.85;
+    }
+
+    button.secondary {
+      background: #334155;
+      color: var(--text);
+    }
+
+    button.open-btn {
+      background: var(--ok);
+      color: #052e16;
+    }
+
+    button.close-btn {
+      background: var(--warn);
+      color: #451a03;
+    }
+
+    button.danger {
+      background: var(--err);
+      color: #fff;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #0f172a;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .badge.active {
+      color: #bbf7d0;
+      border-color: var(--ok);
+    }
+
+    .badge.expired {
+      color: #fecaca;
+      border-color: var(--err);
+    }
+
+    .token-box {
+      background: #0f172a;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+      margin-bottom: 8px;
+      color: #e2e8f0;
+    }
+
+    .timer-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .timer-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    pre {
+      margin: 8px 0 0 0;
+      padding: 10px;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      max-height: 320px;
+      color: #a5f3fc;
+    }
+
+    .hint {
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-top: -6px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 1. Server & Auth -->
+    <div class="card">
+      <h2>
+        <span>Server & Login</span>
+        <span id="envBadge" class="badge">Detecting...</span>
+      </h2>
+
+      <label for="baseUrl">Base URL</label>
+      <input id="baseUrl" type="text" placeholder="http://localhost:3000" />
+      <div id="envHint" class="hint"></div>
+
+      <div class="row">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" type="text" value="admin" />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" value="123456" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="loginBtn" type="button">Login & Ambil Token</button>
+        <button id="logoutBtn" type="button" class="danger">Logout</button>
+      </div>
+    </div>
+
+    <!-- 2. Token & Session Countdown -->
+    <div class="card">
+      <h2>
+        <span>Session Token</span>
+        <span id="sessionBadge" class="badge">No Token</span>
+      </h2>
+
+      <div id="tokenDisplay" class="token-box">(Belum ada token)</div>
+
+      <div class="timer-line">
+        <span>Aproksimasi sisa session (10m):</span>
+        <span id="countdownText" class="timer-val">--:--</span>
+      </div>
+
+      <div class="row">
+        <button id="pingBtn" type="button" class="secondary">Ping / Perpanjang</button>
+        <button id="copyBtn" type="button" class="secondary">Copy Token</button>
+      </div>
+    </div>
+
+    <!-- 3. Node Control (shouldOpen) -->
+    <div class="card">
+      <h2>
+        <span>Kontrol Node (shouldOpen)</span>
+        <span class="badge">true / false</span>
+      </h2>
+
+      <label for="lockerName">Locker Name</label>
+      <input id="lockerName" type="text" value="Locker A1" placeholder="Contoh: Locker A1" />
+
+      <div class="row">
+        <button id="openNodeBtn" type="button" class="open-btn">Buka (shouldOpen: true)</button>
+        <button id="closeNodeBtn" type="button" class="close-btn">Tutup (shouldOpen: false)</button>
+      </div>
+    </div>
+
+    <!-- 4. Raw JSON Data -->
+    <div class="card">
+      <h2>
+        <span>Raw JSON Data</span>
+        <span id="httpStatusBadge" class="badge">Idle</span>
+      </h2>
+
+      <div class="row" style="margin-bottom: 8px;">
+        <button id="getHomeBtn" type="button" class="secondary">GET /api/home</button>
+        <button id="getPackagesBtn" type="button" class="secondary">GET /api/packages</button>
+      </div>
+      <div class="row">
+        <button id="getHistoryBtn" type="button" class="secondary">GET /api/history</button>
+        <button id="getHealthBtn" type="button" class="secondary">GET /health</button>
+      </div>
+
+      <pre id="rawJsonOutput">{ "info": "Klik tombol di atas untuk melihat response JSON" }</pre>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_IDLE_SECONDS = 600; // 10 menit
+    const DEFAULT_RENDER_URL = 'https://nama-app-kamu.onrender.com';
+
+    let token = '';
+    let expiresAtMs = 0; // aproksimasi timestamp expired di sisi client
+
+    const baseUrlInput = document.getElementById('baseUrl');
+    const envBadge = document.getElementById('envBadge');
+    const envHint = document.getElementById('envHint');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const tokenDisplay = document.getElementById('tokenDisplay');
+    const sessionBadge = document.getElementById('sessionBadge');
+    const countdownText = document.getElementById('countdownText');
+    const httpStatusBadge = document.getElementById('httpStatusBadge');
+    const rawJsonOutput = document.getElementById('rawJsonOutput');
+    const lockerNameInput = document.getElementById('lockerName');
+
+    function detectBaseUrl() {
+      const host = window.location.hostname;
+      const port = window.location.port;
+      const protocol = window.location.protocol;
+
+      const isLocal =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host.endsWith('.local');
+
+      if (isLocal) {
+        const localPort = port || '3000';
+        const url = `${protocol}//${host}:${localPort}`;
+        baseUrlInput.value = url;
+        envBadge.textContent = 'Localhost';
+        envBadge.className = 'badge active';
+        envHint.textContent = `Terdeteksi lokal (${host}) -> otomatis pakai ${url}`;
+      } else if (protocol.startsWith('http') && window.location.origin) {
+        baseUrlInput.value = window.location.origin;
+        envBadge.textContent = 'Remote Host';
+        envBadge.className = 'badge active';
+        envHint.textContent = `Terdeteksi origin aktif: ${window.location.origin}`;
+      } else {
+        baseUrlInput.value = DEFAULT_RENDER_URL;
+        envBadge.textContent = 'File / Manual';
+        envBadge.className = 'badge';
+        envHint.textContent = 'Dibuka dari file lokal; ganti URL ke server Render atau localhost kamu.';
+      }
+    }
+
+    function getBaseUrl() {
+      return baseUrlInput.value.trim().replace(/\/+$/, '');
+    }
+
+    function setRawOutput(statusCode, data) {
+      httpStatusBadge.textContent = statusCode ? `HTTP ${statusCode}` : 'Error';
+      httpStatusBadge.className =
+        statusCode >= 200 && statusCode < 300 ? 'badge active' : 'badge expired';
+      rawJsonOutput.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function resetSessionTimer(seconds = DEFAULT_IDLE_SECONDS) {
+      expiresAtMs = Date.now() + seconds * 1000;
+      sessionBadge.textContent = 'Token Aktif';
+      sessionBadge.className = 'badge active';
+      updateCountdownUI();
+    }
+
+    function clearSession(reason = 'No Token', isExpired = false) {
+      token = '';
+      expiresAtMs = 0;
+      tokenDisplay.textContent = '(Belum ada token)';
+      countdownText.textContent = '--:--';
+      sessionBadge.textContent = reason;
+      sessionBadge.className = isExpired ? 'badge expired' : 'badge';
+    }
+
+    function updateCountdownUI() {
+      if (!token || !expiresAtMs) return;
+
+      const remainingSec = Math.floor((expiresAtMs - Date.now()) / 1000);
+      if (remainingSec <= 0) {
+        countdownText.textContent = '00:00';
+        sessionBadge.textContent = 'Expired (~10m)';
+        sessionBadge.className = 'badge expired';
+        return;
+      }
+
+      const mins = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+      const secs = String(remainingSec % 60).padStart(2, '0');
+      countdownText.textContent = `${mins}:${secs}`;
+    }
+
+    async function apiRequest(path, options = {}, requiresAuth = true) {
+      const url = `${getBaseUrl()}${path}`;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+
+      if (requiresAuth) {
+        if (!token) {
+          setRawOutput(null, { error: 'Login dulu untuk mendapatkan session token.' });
+          return null;
+        }
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      try {
+        const res = await fetch(url, {
+          ...options,
+          headers
+        });
+
+        let payload;
+        const text = await res.text();
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          payload = { raw: text };
+        }
+
+        setRawOutput(res.status, payload);
+
+        if (res.status === 401 && requiresAuth) {
+          clearSession('401 Invalid/Expired', true);
+        } else if (res.ok && requiresAuth && token) {
+          const nextSec =
+            typeof payload.remainingSeconds === 'number'
+              ? payload.remainingSeconds
+              : DEFAULT_IDLE_SECONDS;
+          resetSessionTimer(nextSec);
+        }
+
+        return { status: res.status, data: payload };
+      } catch (err) {
+        setRawOutput(null, {
+          error: 'Gagal terhubung ke server',
+          detail: err.message,
+          targetUrl: url
+        });
+        return null;
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      const result = await apiRequest(
+        '/api/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ username, password })
+        },
+        false
+      );
+
+      if (result && result.status === 200 && result.data.token) {
+        token = result.data.token;
+        tokenDisplay.textContent = token;
+        const ttl =
+          typeof result.data.expiresInSeconds === 'number'
+            ? result.data.expiresInSeconds
+            : DEFAULT_IDLE_SECONDS;
+        resetSessionTimer(ttl);
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      if (!token) {
+        clearSession('No Token');
+        return;
+      }
+      await apiRequest('/api/logout', { method: 'POST', body: '{}' }, true);
+      clearSession('Logged Out');
+    });
+
+    document.getElementById('pingBtn').addEventListener('click', async () => {
+      await apiRequest('/api/ping', { method: 'POST', body: '{}' }, true);
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      if (!token) return;
+      try {
+        await navigator.clipboard.writeText(token);
+        sessionBadge.textContent = 'Token Copied';
+        setTimeout(() => {
+          if (token) {
+            sessionBadge.textContent = 'Token Aktif';
+            sessionBadge.className = 'badge active';
+          }
+        }, 1200);
+      } catch {
+        setRawOutput(null, { info: 'Salin manual dari kotak token di atas.' });
+      }
+    });
+
+    async function setShouldOpen(shouldOpen) {
+      const lockerName = lockerNameInput.value.trim();
+      await apiRequest(
+        '/api/locker/open-request',
+        {
+          method: 'POST',
+          body: JSON.stringify({ lockerName, shouldOpen })
+        },
+        true
+      );
+    }
+
+    document.getElementById('openNodeBtn').addEventListener('click', () => setShouldOpen(true));
+    document.getElementById('closeNodeBtn').addEventListener('click', () => setShouldOpen(false));
+
+    document.getElementById('getHomeBtn').addEventListener('click', () =>
+      apiRequest('/api/home', { method: 'GET' }, true)
+    );
+    document.getElementById('getPackagesBtn').addEventListener('click', () =>
+      apiRequest('/api/packages', { method: 'GET' }, true)
+    );
+    document.getElementById('getHistoryBtn').addEventListener('click', () =>
+      apiRequest('/api/history', { method: 'GET' }, true)
+    );
+    document.getElementById('getHealthBtn').addEventListener('click', () =>
+      apiRequest('/health', { method: 'GET' }, false)
+    );
+
+    detectBaseUrl();
+    setInterval(updateCountdownUI, 1000);
+  </script>
+</body>
+</html>
